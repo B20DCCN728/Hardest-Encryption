@@ -1,0 +1,4 @@
+cryptography>=41.0.0
+rich>=13.0.0
+typer>=0.9.0
+argon2-cffi>=23.0.0

@@ -1,0 +1,89 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+*.pyd
+*.dll
+
+# Distribution / packaging
+.Python
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+share/python-wheels/
+var/
+wheels/
+*.egg-info/
+*.egg
+MANIFEST
+pip-wheel-metadata/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage / type-checker artifacts
+.coverage
+.coverage.*
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.nox/
+.tox/
+htmlcov/
+coverage.xml
+*.cover
+*.py,cover
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Environment variables / local config
+.env
+.env.*
+*.local
+
+# Runtime artifacts
+*.log
+*.pid
+*.seed
+*.out
+*.err
+
+# Project-generated sensitive files
+*.enc
+*.ckey
+
+# IDE / editor
+.idea/
+.vscode/
+*.suo
+*.user
+*.userossc
+*.sln.docstates
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
