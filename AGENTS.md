@@ -36,14 +36,15 @@ Hardest-Encryption/
 - Handles Rich console output and progress
 - Decides whether file encryption is direct or streaming
 - Defines command surface:
-  - `encrypt`
-  - `decrypt`
-  - `key generate`
-  - `key info`
-  - `key list`
-  - `info`
-  - `benchmark`
-  - `pipe`
+  - `encrypt` — password or key-file based encryption
+  - `decrypt` — with automatic streaming/direct detection
+  - `key generate` — create and save `.ckey` files
+  - `key info` — inspect key metadata and verify passwords
+  - `key list` — recursively find `.ckey` files in a directory
+  - `info` — inspect encrypted blob metadata without decrypting
+  - `benchmark` — measure encryption/decryption performance
+  - `menu` — interactive loop with Back option (default when no args)
+  - `pipe` — stdin/stdout support for Unix pipes
 
 ### `_crypto_engine.py`
 
@@ -52,6 +53,8 @@ Hardest-Encryption/
 - Implements AES-GCM, AES-CBC+HMAC, AES-SIV
 - Owns the global 80-byte ciphertext header format
 - Handles in-memory encryption/decryption flows
+- Provides password strength indicator
+- Supports both raw keys and password-derived keys
 
 Do not casually change:
 
@@ -110,6 +113,17 @@ Keep it updated whenever behavior or formats change.
 - When a raw key is supplied through `.ckey`, file encryption is forced toward a raw-key path and may bypass password-derived flows.
 - Direct decryption in `cryptool.py` currently assumes an AES-GCM raw-key path for some file cases. Any change here should be verified carefully against CBC and SIV behavior.
 - User-facing output is mostly Vietnamese. Preserve the current language style unless the task explicitly asks for localization cleanup.
+- The `_load_key_source()` helper in `cryptool.py` resolves the key source (raw key from `.ckey` or password) and returns `(raw_key_or_None, alg, kdf, label)`. When `raw_key is None`, callers must provide a password for password-based KDF.
+- Password confirmation prompts are only shown during encryption (`confirm=True` flag); decryption always prompts without confirmation.
+- When decrypting, if both raw key and password are None, a single password prompt is issued automatically.
+
+## Critical Patterns in cryptool.py
+
+- **Default menu mode**: When `cryptool.py` is run with no arguments, it launches `_run_interactive_menu()` directly from `__main__`.
+- **Key resolution flow**: All encrypt/decrypt commands use `_load_key_source()` to unify password vs. key-file handling. This centralizes authentication logic.
+- **Streaming decision**: File encryption automatically uses streaming if either `should_use_streaming()` returns true OR a raw key is supplied.
+- **Progress reporting**: Use `_make_progress()` to create Rich progress bars with standardized columns (spinner, bar, speed, elapsed time).
+- **Rich output panels**: Use `Panel()` with border styles ("green" for success, "red" for error, "cyan" for info) and table layouts for all output.
 
 ## Change Guidelines
 
@@ -122,12 +136,14 @@ Keep it updated whenever behavior or formats change.
 
 ## Recommended Workflow For Agents
 
-1. Read `cryptool.py` to identify the user-facing path.
-2. Read the module that owns the relevant behavior.
-3. Check `tests.py` for current expectations.
-4. Make minimal edits.
-5. Run `python tests.py` when behavior changes.
-6. Update docs if command surface, formats, or setup changes.
+1. Read `cryptool.py` to identify the user-facing path through CLI commands and helper functions like `_load_key_source()` and `_make_progress()`.
+2. Trace key flows such as password prompting (`_ask_password()`) and streaming detection (`should_use_streaming()`).
+3. Read the module that owns the relevant behavior (crypto engine, streaming, key management).
+4. Check `tests.py` for current expectations on behavior, formats, and error conditions.
+5. Make minimal edits; preserve format constants and enum values.
+6. Run `python tests.py` when encryption/decryption logic changes.
+7. Update `README.md` and CLI help text (`help=` in `@app.command()`) if command surface changes.
+8. For file format changes, update both the implementation module and `tests.py`.
 
 ## Known Gaps
 
