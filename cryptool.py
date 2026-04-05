@@ -161,6 +161,220 @@ def _make_progress() -> Progress:
     )
 
 
+def _wait_for_back() -> None:
+    console.print("\n[dim]Nhấn Enter để quay lại menu...[/dim]")
+    input()
+
+
+def _prompt_optional_text(label: str) -> Optional[str]:
+    value = typer.prompt(label, default="").strip()
+    return value or None
+
+
+def _prompt_optional_path(label: str) -> Optional[Path]:
+    value = typer.prompt(label, default="").strip()
+    return Path(value) if value else None
+
+
+def _prompt_menu_alg(default: str = "gcm") -> str:
+    while True:
+        value = typer.prompt("Thuật toán [gcm/cbc/siv]", default=default).strip().lower()
+        if value in ALG_MAP:
+            return value
+        err.print("[red]✗ Chọn một trong: gcm, cbc, siv[/red]")
+
+
+def _prompt_menu_kdf(default: str = "argon2") -> str:
+    while True:
+        value = typer.prompt("KDF [argon2/pbkdf2]", default=default).strip().lower()
+        if value in KDF_MAP:
+            return value
+        err.print("[red]✗ Chọn một trong: argon2, pbkdf2[/red]")
+
+
+def _prompt_menu_mode(default: str = "file") -> str:
+    while True:
+        value = typer.prompt("Chế độ [text/file]", default=default).strip().lower()
+        if value in {"text", "file"}:
+            return value
+        err.print("[red]✗ Chọn một trong: text, file[/red]")
+
+
+def _menu_encrypt() -> None:
+    console.print("\n[bold cyan]🔒 Mã hóa[/bold cyan]")
+    mode = _prompt_menu_mode()
+    if mode == "text":
+        text = typer.prompt("Văn bản cần mã hóa")
+        file = None
+        output = None
+        chunk_mb = 4
+        stream_th = 8
+        delete_src = False
+    else:
+        file = Path(typer.prompt("File cần mã hóa"))
+        text = None
+        output = _prompt_optional_path("Output file [Enter để mặc định]")
+        chunk_mb = typer.prompt("Chunk size cho streaming (MB)", type=int, default=4)
+        stream_th = typer.prompt("Streaming khi file >= X MB", type=int, default=8)
+        delete_src = typer.confirm("Xóa file gốc sau khi mã hóa?", default=False)
+
+    use_key_file = typer.confirm("Dùng file .ckey?", default=False)
+    if use_key_file:
+        key_file = Path(typer.prompt("Đường dẫn file .ckey"))
+        key_pass = _prompt_optional_text("Mật khẩu mở key file [Enter nếu không có]")
+        password = None
+    else:
+        key_file = None
+        key_pass = None
+        password = _prompt_optional_text("Mật khẩu [Enter để nhập ẩn sau]")
+
+    cmd_encrypt(
+        text=text,
+        file=file,
+        output=output,
+        password=password,
+        key_file=key_file,
+        key_pass=key_pass,
+        algorithm=_prompt_menu_alg(),
+        kdf=_prompt_menu_kdf(),
+        chunk_mb=chunk_mb,
+        stream_th=stream_th,
+        delete_src=delete_src,
+    )
+
+
+def _menu_decrypt() -> None:
+    console.print("\n[bold cyan]🔓 Giải mã[/bold cyan]")
+    mode = _prompt_menu_mode()
+    if mode == "text":
+        text = typer.prompt("Ciphertext Base64")
+        file = None
+        output = None
+    else:
+        file = Path(typer.prompt("File .enc"))
+        text = None
+        output = _prompt_optional_path("Output file [Enter để mặc định]")
+
+    use_key_file = typer.confirm("Dùng file .ckey?", default=False)
+    if use_key_file:
+        key_file = Path(typer.prompt("Đường dẫn file .ckey"))
+        key_pass = _prompt_optional_text("Mật khẩu mở key file [Enter nếu không có]")
+        password = None
+    else:
+        key_file = None
+        key_pass = None
+        password = _prompt_optional_text("Mật khẩu [Enter để nhập ẩn sau]")
+
+    cmd_decrypt(
+        text=text,
+        file=file,
+        output=output,
+        password=password,
+        key_file=key_file,
+        key_pass=key_pass,
+    )
+
+
+def _menu_key_generate() -> None:
+    console.print("\n[bold yellow]🗝️  Tạo key file[/bold yellow]")
+    save = Path(typer.prompt("Lưu key vào", default="key.ckey"))
+    protect = typer.confirm("Bảo vệ key file bằng mật khẩu?", default=False)
+    if protect:
+        key_pass = _prompt_optional_text("Mật khẩu bảo vệ [Enter để nhập ẩn sau]")
+    else:
+        key_pass = None
+
+    cmd_key_generate(
+        save=save,
+        protect=protect,
+        key_pass=key_pass,
+        description=typer.prompt("Mô tả", default=""),
+        algorithm=_prompt_menu_alg(),
+        kdf=_prompt_menu_kdf(),
+        tags=typer.prompt("Tags (phân tách bằng dấu phẩy)", default=""),
+    )
+
+
+def _menu_key_info() -> None:
+    console.print("\n[bold yellow]📋 Thông tin key file[/bold yellow]")
+    cmd_key_info(
+        key_path=Path(typer.prompt("Đường dẫn file .ckey")),
+        key_pass=_prompt_optional_text("Mật khẩu key file [Enter nếu không có]"),
+        show_fp=typer.confirm("Hiển thị fingerprint đầy đủ?", default=False),
+    )
+
+
+def _menu_key_list() -> None:
+    console.print("\n[bold yellow]📂 Liệt kê key file[/bold yellow]")
+    cmd_key_list(
+        directory=Path(typer.prompt("Thư mục tìm kiếm", default=".")),
+    )
+
+
+def _menu_info() -> None:
+    console.print("\n[bold blue]📋 Xem thông tin ciphertext[/bold blue]")
+    mode = _prompt_menu_mode()
+    if mode == "text":
+        cmd_info(text=typer.prompt("Ciphertext Base64"), file=None)
+    else:
+        cmd_info(file=Path(typer.prompt("File .enc")), text=None)
+
+
+def _menu_benchmark() -> None:
+    console.print("\n[bold magenta]⚡ Benchmark[/bold magenta]")
+    cmd_benchmark(size_mb=typer.prompt("Kích thước test (MB)", type=int, default=64))
+
+
+def _run_menu_action(label: str, action) -> None:
+    try:
+        action()
+    except typer.Exit:
+        pass
+    except Exception as e:
+        err.print(f"\n[bold red]✗ Lỗi không mong muốn trong {label}:[/bold red] {e}")
+    _wait_for_back()
+
+
+def _render_interactive_menu() -> None:
+    table = Table(box=box.ROUNDED, show_header=False, padding=(0, 2), border_style="cyan")
+    table.add_column("", style="bold cyan", width=3)
+    table.add_column("")
+    table.add_row("1", "🔒 Mã hóa")
+    table.add_row("2", "🔓 Giải mã")
+    table.add_row("3", "🗝️  Tạo key file")
+    table.add_row("4", "📋 Thông tin key file")
+    table.add_row("5", "📂 Liệt kê key file")
+    table.add_row("6", "📋 Thông tin ciphertext")
+    table.add_row("7", "⚡ Benchmark")
+    table.add_row("0", "Thoát")
+    console.print(Panel(table, title="[bold]CrypTool Interactive Menu[/bold]", border_style="cyan"))
+
+
+def _run_interactive_menu() -> None:
+    actions = {
+        "1": ("Mã hóa", _menu_encrypt),
+        "2": ("Giải mã", _menu_decrypt),
+        "3": ("Tạo key file", _menu_key_generate),
+        "4": ("Thông tin key file", _menu_key_info),
+        "5": ("Liệt kê key file", _menu_key_list),
+        "6": ("Thông tin ciphertext", _menu_info),
+        "7": ("Benchmark", _menu_benchmark),
+    }
+
+    while True:
+        console.print()
+        _render_interactive_menu()
+        choice = typer.prompt("Chọn chức năng", default="1").strip()
+        if choice == "0":
+            console.print("\n[bold green]Tạm biệt.[/bold green]\n")
+            return
+        if choice not in actions:
+            err.print("[red]✗ Lựa chọn không hợp lệ. Vui lòng chọn lại.[/red]")
+            continue
+        label, action = actions[choice]
+        _run_menu_action(label, action)
+
+
 # ─── encrypt ─────────────────────────────────────────────────────────────────
 
 @app.command("encrypt", help="🔒 Mã hóa file (video, ảnh, tài liệu...) hoặc văn bản")
@@ -782,6 +996,11 @@ def cmd_benchmark(
     console.print("[dim]💡 Streaming dùng raw key nên tốc độ phụ thuộc thuần vào AES-GCM[/dim]\n")
 
 
+@app.command("menu", help="🧭 Chạy chế độ menu tương tác có thể quay lại")
+def cmd_menu():
+    _run_interactive_menu()
+
+
 # ─── pipe ─────────────────────────────────────────────────────────────────────
 
 @app.command("pipe", help="🔄 Đọc stdin, ghi stdout — dùng với Unix pipe")
@@ -852,4 +1071,7 @@ def _print_decrypt_result(src: Path, dst: Path, result: StreamResult, hdr) -> No
 # ─── Entry point ──────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    app()
+    if len(sys.argv) == 1:
+        _run_interactive_menu()
+    else:
+        app()

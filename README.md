@@ -9,6 +9,7 @@
 - Password-based or key-file-based workflows
 - Streaming encryption for large files
 - Binary `.ckey` key file format with optional password protection
+- Interactive menu loop with `BACK` to the main menu
 - Rich terminal UI with tables, panels, progress bars, and benchmark output
 - Built-in test suite in `tests.py`
 
@@ -61,6 +62,18 @@ pip install -r requirements.txt
 
 ## Quick Start
 
+Run the interactive menu:
+
+```bash
+python cryptool.py
+```
+
+Or open it explicitly:
+
+```bash
+python cryptool.py menu
+```
+
 Encrypt text with a password:
 
 ```bash
@@ -98,6 +111,14 @@ python cryptool.py encrypt --file video.mp4 --key-file mykey.ckey --key-pass "Ke
 ```
 
 ## CLI Commands
+
+### `menu`
+
+Runs the interactive menu loop. After each action, the program waits for Enter and returns to the main menu.
+
+```bash
+python cryptool.py menu
+```
 
 ### `encrypt`
 
